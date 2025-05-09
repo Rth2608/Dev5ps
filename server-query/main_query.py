@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
-from get_data import get_ohlcv_data
+from get_data import get_full_ohlcv_data
 from shared.symbols_intervals import SYMBOLS, INTERVALS
 
 app = FastAPI()
@@ -30,7 +30,7 @@ def read_ohlcv(
             detail = "Invalid symbol or interval"
             )
     try:
-        data = get_ohlcv_data(symbol, interval)
+        data = get_full_ohlcv_data(symbol, interval)
         safe_data = jsonable_encoder(data)
         return safe_data
     except Exception as e:
