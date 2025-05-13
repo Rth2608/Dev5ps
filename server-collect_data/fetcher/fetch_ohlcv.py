@@ -116,7 +116,7 @@ def save_to_db(symbol: str, interval: str):
                 raise
 
 
-
+'''
 ############################################################
 
 def calculate_strategy_data(df, strategy: str, risk_reward_ratio: float):
@@ -198,4 +198,4 @@ def apply_strategy_and_save(symbol: str, interval: str, strategy: str, risk_rewa
 
     result_df = calculate_strategy_data(df, strategy, risk_reward_ratio)
     save_result_to_table(result_df)
-   
+   '''

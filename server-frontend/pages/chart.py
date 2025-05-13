@@ -7,7 +7,7 @@ from shared.symbols_intervals import SYMBOLS, INTERVALS
 import os
 
 # fastapi 설정
-API_URL = os.getenv("API_URL", "http://localhost:8080")
+API_URL = st.secrets.get("API_URL", "http://localhost:8080")
 
 # UI
 st.set_page_config(page_title="캔들차트", layout="wide")

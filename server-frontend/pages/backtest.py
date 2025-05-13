@@ -1,6 +1,10 @@
 import streamlit as st
 from shared.symbols_intervals import SYMBOLS, INTERVALS
 import re
+import requests
+import os
+
+API_URL = st.secrets.get("API_URL", "http://localhost:8080")
 
 st.set_page_config(page_title="차트 분석 플랫폼", layout="wide")
 st.title("Backtesting Page")
@@ -70,9 +74,21 @@ if st.button("전략 실행 및 저장"):
         strategy = " and ".join(conditions_str)
 
         st.success("전략 실행 준비 완료 (예시 출력)")
-        st.json({
+        strategy_data = {
             "symbol": symbol,
             "interval": interval,
             "strategy_sql": strategy,
             "risk_reward_ratio": rr_ratio
-        })
+        }
+        st.json(strategy_data)
+
+        api_url = f"{API_URL}/save_strategy"
+        
+        try:
+            response = requests.post(api_url, json=strategy_data)
+            if response.status_code == 200:
+                st.success("전략 데이터 저장 완료!")
+            else:
+                st.error(f"전략 저장 실패: {response.text}")
+        except Exception as e:
+                st.error(f"전략 저장 중 오류 발생: {e}")

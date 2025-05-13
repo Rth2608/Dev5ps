@@ -1,16 +1,9 @@
-import sys
-import os
 import time
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from shared.connect_db import engine
 import pandas as pd
 from sqlalchemy import text
-from indicators.calculate import calculate_indicators
-from sqlalchemy import text
 import pandas as pd
 
-start_time = time.time()
 
 
 def run_conditional_lateral_backtest(
@@ -30,7 +23,10 @@ def run_conditional_lateral_backtest(
             WHEN x.low <= e.low THEN 'SL'
             WHEN x.high >= (e.close + (e.close - e.low) * :rr_ratio) THEN 'TP'
             ELSE 'UNKNOWN'
-        END AS result
+        END AS result,
+        :symbol AS symbol, 
+        :interval AS interval, 
+        '{strategy_sql}' AS strategy  
     FROM (
         SELECT timestamp, close, low
         FROM "{table_name}"
@@ -50,7 +46,7 @@ def run_conditional_lateral_backtest(
     """
 
     with engine.connect() as conn:
-        df = pd.read_sql(text(query), conn, params={"rr_ratio": risk_reward_ratio})
+        df = pd.read_sql(text(query), conn, params={"rr_ratio": risk_reward_ratio, "symbol": symbol, "interval": interval})
 
     return df
 
@@ -69,7 +65,10 @@ def save_result_to_table(data: pd.DataFrame):
         stop_loss DOUBLE PRECISION,
         take_profit DOUBLE PRECISION,
         exit_time TIMESTAMPTZ,
-        result TEXT
+        result TEXT,
+        symbol TEXT, 
+        interval TEXT,
+        strategy TEXT 
     );
     """
 
@@ -90,17 +89,3 @@ def save_result_to_table(data: pd.DataFrame):
     print(f"→ '{table_name}' 테이블에 데이터 저장 완료 (기존 데이터는 초기화)")
 
 
-# 구현시 strategy는 프론트엔드에서 UI로 입력받은 내용을 바탕으로 query로 변경 후 넣을 예정
-strategy = "rsi > 30"
-
-# "btc", "1h"는 테스트용으로 하드코딩 하였지만 구현시 프론트엔드에서 UI로 입력받는 symbols_intervals.py의 symbols와 intervals를 값으로 할 예정
-# risk_reward_ratio도 테스트를 위해 2.0으로 하드코딩 해놓았지만 구현시 프론트엔드에서 UI로 입력받을 실수 값임
-df_result = run_conditional_lateral_backtest(
-    "btc", "1h", strategy_sql=strategy, risk_reward_ratio=2.0
-)
-save_result_to_table(df_result)
-
-# O(N log N)으로 기존 for문으로 할 때의 O(N²)보다 빠름
-end_time = time.time()
-elapsed = end_time - start_time
-print(f"총 소요 시간: {elapsed:.2f}초")
