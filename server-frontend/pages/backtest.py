@@ -23,17 +23,37 @@ with col2:
 st.subheader("조건 설정")
 
 all_fields = [
-    "open", "high", "low", "close", "volume", "rsi", "rsi_signal",
-    "ema_7", "ema_25", "ema_99", "macd", "macd_signal",
-    "boll_ma", "boll_upper", "boll_lower", "volume_ma_20"
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "rsi",
+    "rsi_signal",
+    "ema_7",
+    "ema_25",
+    "ema_99",
+    "macd",
+    "macd_signal",
+    "boll_ma",
+    "boll_upper",
+    "boll_lower",
+    "volume_ma_20",
 ]
 operators = [">", ">=", "<", "<=", "==", "!="]
 
 if st.button("➕ 조건 추가"):
     cid = st.session_state.condition_id_counter
-    st.session_state.conditions.append({
-        "id": cid, "left": "open", "op": ">", "mode": "값", "value": "0", "right": "close"
-    })
+    st.session_state.conditions.append(
+        {
+            "id": cid,
+            "left": "open",
+            "op": ">",
+            "mode": "값",
+            "value": "0",
+            "right": "close",
+        }
+    )
     st.session_state.condition_id_counter += 1
     st.rerun()
 
@@ -41,22 +61,46 @@ to_delete = None
 for cond in st.session_state.conditions:
     col1, col2, col3, col4, col5, col6 = st.columns([1.2, 1, 1.5, 1.5, 1.5, 0.3])
     with col1:
-        cond["left"] = st.selectbox("지표", all_fields, key=f"left_{cond['id']}", index=all_fields.index(cond["left"]))
+        cond["left"] = st.selectbox(
+            "지표",
+            all_fields,
+            key=f"left_{cond['id']}",
+            index=all_fields.index(cond["left"]),
+        )
     with col2:
-        cond["op"] = st.selectbox("연산자", operators, key=f"op_{cond['id']}", index=operators.index(cond["op"]))
+        cond["op"] = st.selectbox(
+            "연산자",
+            operators,
+            key=f"op_{cond['id']}",
+            index=operators.index(cond["op"]),
+        )
     with col3:
-        cond["mode"] = st.selectbox("기준", ["값", "지표"], key=f"mode_{cond['id']}", index=["값", "지표"].index(cond["mode"]))
+        cond["mode"] = st.selectbox(
+            "기준",
+            ["값", "지표"],
+            key=f"mode_{cond['id']}",
+            index=["값", "지표"].index(cond["mode"]),
+        )
     with col4:
         if cond["mode"] == "값":
-            cond["value"] = st.text_input("값 입력", value=cond["value"], key=f"value_{cond['id']}")
+            cond["value"] = st.text_input(
+                "값 입력", value=cond["value"], key=f"value_{cond['id']}"
+            )
         else:
-            cond["right"] = st.selectbox("비교 지표", all_fields, key=f"right_{cond['id']}", index=all_fields.index(cond["right"]))
+            cond["right"] = st.selectbox(
+                "비교 지표",
+                all_fields,
+                key=f"right_{cond['id']}",
+                index=all_fields.index(cond["right"]),
+            )
     with col6:
         if st.button("❌", key=f"delete_{cond['id']}"):
             to_delete = cond["id"]
 
 if to_delete is not None:
-    st.session_state.conditions = [c for c in st.session_state.conditions if c["id"] != to_delete]
+    st.session_state.conditions = [
+        c for c in st.session_state.conditions if c["id"] != to_delete
+    ]
     st.rerun()
 
 rr_ratio = st.text_input("손익비 (예: 2.0)", value="2.0")
@@ -78,12 +122,12 @@ if st.button("전략 실행 및 저장"):
             "symbol": symbol,
             "interval": interval,
             "strategy_sql": strategy,
-            "risk_reward_ratio": rr_ratio
+            "risk_reward_ratio": rr_ratio,
         }
         st.json(strategy_data)
 
         api_url = f"{API_URL}/save_strategy"
-        
+
         try:
             response = requests.post(api_url, json=strategy_data)
             if response.status_code == 200:
@@ -91,4 +135,4 @@ if st.button("전략 실행 및 저장"):
             else:
                 st.error(f"전략 저장 실패: {response.text}")
         except Exception as e:
-                st.error(f"전략 저장 중 오류 발생: {e}")
+            st.error(f"전략 저장 중 오류 발생: {e}")

@@ -56,7 +56,7 @@ def save_result_to_table(data: pd.DataFrame):
         print("저장할 결과가 없습니다.")
         return
 
-    table_name = "trade_results_modified"
+    table_name = "filtered"
     # entry_price도 테이블에 추가함
     create_table_query = f"""
     CREATE TABLE IF NOT EXISTS {table_name} (
