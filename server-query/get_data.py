@@ -4,50 +4,63 @@ from sqlalchemy import text
 from shared.connect_db import engine
 
 
-def get_ohlcv_data(
-    symbol: str,
-    interval: str,
-    # filter: str = None,
-    # min_value: float = None,
-    # max_value: float = None,
-    return_type: str | list[str] = None,
+def wrap_strs_with_quote(x: str | list[str]) -> str:
+    if isinstance(x, str):
+        return f'"{x}"'
+    return ", ".join([f'"{col}"' for col in x])
+
+
+def get_data_from_table(
+    table_name: str,
+    return_type: str | list[str],
+    order_by: str | None = None,
+    filter: str | None = None,  # Optional, single key
+    min_value=None,
+    max_value=None,
 ) -> list:
 
-    TABLE_NAME = f"{symbol.lower()}_{interval}"
-
-    if return_type is None:
-        # Default return type
-        return_type = ["timestamp", "open", "high", "low", "close", "volume"]
-    elif isinstance(return_type, str):
-        # Wrap to list
-        return_type = [return_type]
-
-    # Wrap with double quotes
-    select_clause = "SELECT " + ", ".join([f'"{col}"' for col in return_type])
-
+    COLS = wrap_strs_with_quote(return_type)
     params = {}
-    where_clause_list = []
     where_clause = ""
-    """
+    # empty df
+    df = pd.DataFrame()
+
+    if order_by is None:
+        # set default sort by first col of return type
+        order_by = return_type if isinstance(return_type, str) else return_type[0]
+
     if filter is not None:
+        # filter (WHERE) is set
+        where_clause = f"WHERE {filter} "
         if min_value is not None:
-            where_clause_list.append(f'"{filter}" >= :min_value')
-            params["min_value"] = min_value
+            params["min"] = min_value
         if max_value is not None:
-            where_clause_list.append(f'"{filter}" <= :max_value')
-            params["max_value"] = max_value
-        where_clause = "WHERE " + " AND ".join(where_clause_list)
-    """
+            params["max"] = max_value
+
+        match len(params):
+            case 2:
+                # use BETWEEN
+                where_clause += "BETWEEN :min AND :max"
+            case 1:
+                if min_value is not None:
+                    where_clause += ">= :min"
+                else:  # max_value
+                    where_clause += "<= :max"
+            case _:
+                raise ValueError("WHERE field missing value(s)")
+
+    query = text(
+        f'SELECT {COLS} FROM "{table_name}" {where_clause} ORDER BY "{order_by}"'
+    )
     try:
         with engine.connect() as conn:
-            query = text(
-                f"{select_clause} FROM {TABLE_NAME} {where_clause} ORDER BY timestamp"
+            df = pd.read_sql(
+                query,
+                conn,
+                params=params,
             )
-            df = pd.read_sql(query, conn, params=params)
-
     except Exception as e:
-        print(f"{TABLE_NAME} DB error: {e}")
-        raise e
+        print(e)
 
     if df.empty:
         return []
@@ -56,8 +69,46 @@ def get_ohlcv_data(
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df = df.where(pd.notnull(df), None)
 
+    # convert timestamptz to str (ISO 8601)
+    for col in df.columns:
+        if isinstance(df[col].dtype, pd.DatetimeTZDtype):
+            # detects pandas datetime
+            df[col] = df[col].astype(str)
+
     return df.to_dict(orient="records")
 
 
-def get_full_ohlcv_data(symbol: str, interval: str) -> list:
-    return get_ohlcv_data(symbol, interval)
+def get_ohlcv_data(
+    symbol: str,
+    interval: str,
+    filter=None,
+    min_value=None,
+    max_value=None,
+) -> list:
+
+    table_name = f"{symbol}_{interval}".lower()
+    return_type = [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+    ]
+
+    return get_data_from_table(
+        table_name=table_name,
+        return_type=return_type,
+        filter=filter,
+        min_value=min_value,
+        max_value=max_value,
+    )
+
+
+def get_filtered_data() -> list:
+    table_name = "filtered"
+    return_type = ["entry_time", "exit_time", "symbol", "interval"]
+    return get_data_from_table(
+        table_name=table_name,
+        return_type=return_type,
+    )
