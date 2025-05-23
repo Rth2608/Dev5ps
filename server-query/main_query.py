@@ -9,6 +9,7 @@ from filtered_func import (
 )
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
+from datetime import datetime as dt
 
 app = FastAPI()
 
@@ -25,28 +26,57 @@ app.add_middleware(
 @app.get("/filtered-ohlcv")
 def read_filtered_ohlcv():
     try:
-        return JSONResponse(get_filtered_data())
+        data = get_filtered_data()
+        safe_data = jsonable_encoder(data)
+        return safe_data
 
     except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        print(repr(e))
+        return HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
 
 
 @app.get("/filtered-candle-data")
 def get_candle_data(
-    entry_time: str = Query(...),
-    exit_time: str = Query(...),
-    symbol: str = Query(...),
-    interval: str = Query(...),
+    entry_time: str,
+    exit_time: str,
+    symbol: str,
+    interval: str,
 ):
-    return JSONResponse(
-        content=get_ohlcv_data(
+
+    try:
+        # 2020-01-23 00:00:00+00
+        dt.strptime(entry_time, "%Y-%m-%d %H:%M:%S%z")
+        dt.strptime(exit_time, "%Y-%m-%d %H:%M:%S%z")
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid time format",
+        )
+
+    if symbol.upper() not in SYMBOLS or interval.lower() not in INTERVALS:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid symbol or interval",
+        )
+    try:
+        data = get_ohlcv_data(
             symbol=symbol,
             interval=interval,
             filter="timestamp",
             min_value=entry_time,
             max_value=exit_time,
         )
-    )
+        safe_data = jsonable_encoder(data)
+        return safe_data
+    except Exception as e:
+        print(repr(e))
+        return HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
 
 
 # 캔들 데이터 호출 api
@@ -59,14 +89,20 @@ def read_ohlcv(
     symbol = symbol.upper()
     interval = interval.lower()
     if symbol not in SYMBOLS or interval not in INTERVALS:
-        raise HTTPException(status_code=400, detail="Invalid symbol or interval")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid symbol or interval",
+        )
     try:
         data = get_ohlcv_data(symbol, interval)
         safe_data = jsonable_encoder(data)
         return safe_data
     except Exception as e:
-        print(f"Error fetching data for {symbol}_{interval}: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        print(f"Error fetching data for {symbol}_{interval}: {repr(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
 
 
 class StrategyRequest(BaseModel):
@@ -88,4 +124,8 @@ def save_strategy(req: StrategyRequest):
         save_result_to_table(result_df)
         return {"message": "전략 실행 및 결과 저장 완료", "rows": len(result_df)}
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        print(repr(e))
+        return HTTPException(
+            status_code=500,
+            detail="Error while running strategy",
+        )
