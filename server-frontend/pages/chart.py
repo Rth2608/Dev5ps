@@ -16,8 +16,8 @@ st.title("암호화폐 실시간 차트")
 
 
 # UI ( 사용자 입력 )
-symbol = st.selectbox("암호화폐 선택", SYMBOLS)
-interval = st.selectbox("Timeframe 선택", INTERVALS, index=0)
+symbol = st.selectbox("코인", SYMBOLS)
+interval = st.selectbox("시간 간격(h)", INTERVALS, index=0)
 volume_threshold = st.number_input("최소 거래량", min_value=0.0, value=0.0, step=1000.0)
 
 # /ohlcv/{symbol}/{interval} 호출 함수 ( 호출 주기 60초로 제한 )
