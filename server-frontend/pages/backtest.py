@@ -113,7 +113,16 @@ if st.button("전략 실행 및 저장"):
         for cond in st.session_state.conditions:
             left = cond["left"]
             op = cond["op"]
-            right = cond["value"] if cond["mode"] == "값" else cond["right"]
+            if cond["mode"] == "값":
+                try:
+                    # Allow only float
+                    float(cond["value"])
+                except ValueError:
+                    st.error(f"올바르지 않은 값: {cond['value']}")
+                    st.stop()
+                right = cond["value"]
+            else:
+                right = cond["right"]
             conditions_str.append(f"{left} {op} {right}")
         strategy = " and ".join(conditions_str)
 
