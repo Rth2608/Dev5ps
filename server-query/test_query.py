@@ -128,3 +128,29 @@ def test_strategy(client, sym, intv, strategy):
     r_json = response.json()
     assert r_json["message"] == "전략 실행 및 결과 저장 완료"
     assert r_json["rows"] > 0
+
+
+INVALID_STRATEGY = [
+    "open > 4000 and",
+    "volume >",
+    "close >= 1000K",
+]
+
+
+@pytest.mark.parametrize("sym", SYMBOLS)
+@pytest.mark.parametrize("intv", INTERVALS)
+@pytest.mark.parametrize("strategy", INVALID_STRATEGY)
+def test_strategy_invalid(client, sym, intv, strategy):
+
+    response = client.post(
+        "/save_strategy",
+        json={
+            "symbol": sym,
+            "interval": intv,
+            "strategy_sql": strategy,
+            "risk_reward_ratio": 5.0,  # random float
+        },
+    )
+    assert response.status_code == 500
+    r_json = response.json()
+    assert r_json["detail"] == "Error while running strategy"
