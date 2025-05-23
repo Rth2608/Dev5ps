@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from get_data import get_ohlcv
+from fastapi.encoders import jsonable_encoder
+from get_data import get_ohlcv_data, get_filtered_data, get_data_from_table
 from shared.symbols_intervals import SYMBOLS, INTERVALS
 from filtered_func import (
     run_conditional_lateral_backtest,
@@ -8,9 +9,7 @@ from filtered_func import (
 )
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
-from shared.connect_db import engine
-import pandas as pd
+from datetime import datetime as dt
 
 app = FastAPI()
 
@@ -26,60 +25,91 @@ app.add_middleware(
 
 @app.get("/filtered-ohlcv")
 def read_filtered_ohlcv():
-    query = text(
-        """
-        SELECT entry_time, exit_time, symbol, interval
-        FROM filtered
-        ORDER BY entry_time
-    """
-    )
     try:
-        with engine.connect() as conn:
-            df = pd.read_sql(query, conn)
-
-        # timestamp → ISO 8601 문자열로 변환
-        df["entry_time"] = df["entry_time"].astype(str)
-        df["exit_time"] = df["exit_time"].astype(str)
-
-        return JSONResponse(content=df.to_dict(orient="records"))
+        data = get_filtered_data()
+        safe_data = jsonable_encoder(data)
+        return safe_data
 
     except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        print(repr(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
 
 
 @app.get("/filtered-candle-data")
 def get_candle_data(
-    entry_time: str = Query(...),
-    exit_time: str = Query(...),
-    symbol: str = Query(...),
-    interval: str = Query(...),
+    entry_time: str,
+    exit_time: str,
+    symbol: str,
+    interval: str,
 ):
-    table_name = f"{symbol.lower()}_{interval}"
-    query = text(
-        f"""
-        SELECT timestamp, open, high, low, close, volume
-        FROM "{table_name}"
-        WHERE timestamp BETWEEN :entry AND :exit
-        ORDER BY timestamp
-    """
-    )
+    entry_dt = None
+    exit_dt = None
+    try:
+        # 2020-01-23 00:00:00+00
+        entry_dt = dt.strptime(entry_time, "%Y-%m-%d %H:%M:%S%z")
+        exit_dt = dt.strptime(exit_time, "%Y-%m-%d %H:%M:%S%z")
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid time format",
+        )
 
-    with engine.connect() as conn:
-        df = pd.read_sql(query, conn, params={"entry": entry_time, "exit": exit_time})
+    if entry_dt > exit_dt:
+        raise HTTPException(
+            status_code=400,
+            detail="Entry time is ahead of Exit time",
+        )
 
-    # timestamp → 문자열
-    df["timestamp"] = df["timestamp"].astype(str)
-
-    return JSONResponse(content=df.to_dict(orient="records"))
+    if symbol.upper() not in SYMBOLS or interval.lower() not in INTERVALS:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid symbol or interval",
+        )
+    try:
+        data = get_ohlcv_data(
+            symbol=symbol,
+            interval=interval,
+            filter="timestamp",
+            min_value=entry_time,
+            max_value=exit_time,
+        )
+        safe_data = jsonable_encoder(data)
+        return safe_data
+    except Exception as e:
+        print(repr(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
 
 
 # 캔들 데이터 호출 api
 @app.get("/ohlcv/{symbol}/{interval}")
-def read_ohlcv(symbol: str, interval: str):
-    data = get_ohlcv(symbol, interval)
-    if data is None:
-        raise HTTPException(status_code=404, detail="db조회 실패")
-    return data
+def read_ohlcv(
+    symbol: str,
+    interval: str,
+) -> list:
+
+    symbol = symbol.upper()
+    interval = interval.lower()
+    if symbol not in SYMBOLS or interval not in INTERVALS:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid symbol or interval",
+        )
+    try:
+        data = get_ohlcv_data(symbol, interval)
+        safe_data = jsonable_encoder(data)
+        return safe_data
+    except Exception as e:
+        print(f"Error fetching data for {symbol}_{interval}: {repr(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
 
 
 class StrategyRequest(BaseModel):
@@ -101,4 +131,8 @@ def save_strategy(req: StrategyRequest):
         save_result_to_table(result_df)
         return {"message": "전략 실행 및 결과 저장 완료", "rows": len(result_df)}
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        print(repr(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Error while running strategy",
+        )
