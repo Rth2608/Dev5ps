@@ -32,7 +32,7 @@ def read_filtered_ohlcv():
 
     except Exception as e:
         print(repr(e))
-        return HTTPException(
+        raise HTTPException(
             status_code=500,
             detail="Internal Server Error",
         )
@@ -80,7 +80,7 @@ def get_candle_data(
         return safe_data
     except Exception as e:
         print(repr(e))
-        return HTTPException(
+        raise HTTPException(
             status_code=500,
             detail="Internal Server Error",
         )
@@ -132,7 +132,7 @@ def save_strategy(req: StrategyRequest):
         return {"message": "전략 실행 및 결과 저장 완료", "rows": len(result_df)}
     except Exception as e:
         print(repr(e))
-        return HTTPException(
+        raise HTTPException(
             status_code=500,
             detail="Error while running strategy",
         )
