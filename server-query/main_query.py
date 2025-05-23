@@ -45,15 +45,22 @@ def get_candle_data(
     symbol: str,
     interval: str,
 ):
-
+    entry_dt = None
+    exit_dt = None
     try:
         # 2020-01-23 00:00:00+00
-        dt.strptime(entry_time, "%Y-%m-%d %H:%M:%S%z")
-        dt.strptime(exit_time, "%Y-%m-%d %H:%M:%S%z")
+        entry_dt = dt.strptime(entry_time, "%Y-%m-%d %H:%M:%S%z")
+        exit_dt = dt.strptime(exit_time, "%Y-%m-%d %H:%M:%S%z")
     except ValueError:
         raise HTTPException(
             status_code=400,
             detail="Invalid time format",
+        )
+
+    if entry_dt > exit_dt:
+        raise HTTPException(
+            status_code=400,
+            detail="Entry time is ahead of Exit time",
         )
 
     if symbol.upper() not in SYMBOLS or interval.lower() not in INTERVALS:
