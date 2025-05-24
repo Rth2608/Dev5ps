@@ -3,4 +3,6 @@ uvicorn
 sqlalchemy
 psycopg2-binary
 pandas
-python-dotenv   
+python-dotenv
+pytest
+httpx

@@ -1,41 +1,114 @@
 import pandas as pd
 import numpy as np
 from sqlalchemy import text
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
 from shared.connect_db import engine
-from shared.symbols_intervals import SYMBOLS, INTERVALS
 
 
-# symbol_interval 테이블에서 OHLCV 데이터를 조회하고 반환
-def get_ohlcv(symbol: str, interval: str):
+def wrap_strs_with_quote(x: str | list[str]) -> str:
+    if isinstance(x, str):
+        return f'"{x}"'
+    return ", ".join([f'"{col}"' for col in x])
 
-    if symbol not in SYMBOLS or interval not in INTERVALS:
-        return JSONResponse(
-            content={"error": "테이블이 존재하지 않습니다."}, status_code=400
-        )
 
-    table_name = f"{symbol.lower()}_{interval}"
-    query = text(f"SELECT * FROM {table_name} ORDER BY timestamp")
+def get_data_from_table(
+    table_name: str,
+    return_type: str | list[str],
+    order_by: str | None = None,
+    filter: str | None = None,  # Optional, single key
+    min_value=None,
+    max_value=None,
+) -> list:
 
+    COLS = wrap_strs_with_quote(return_type)
+    params = {}
+    where_clause = ""
+    # empty df
+    df = pd.DataFrame()
+
+    if order_by is None:
+        # set default sort by first col of return type
+        order_by = return_type if isinstance(return_type, str) else return_type[0]
+
+    if filter is not None:
+        # filter (WHERE) is set
+        where_clause = f"WHERE {filter} "
+        if min_value is not None:
+            params["min"] = min_value
+        if max_value is not None:
+            params["max"] = max_value
+
+        match len(params):
+            case 2:
+                # use BETWEEN
+                where_clause += "BETWEEN :min AND :max"
+            case 1:
+                if min_value is not None:
+                    where_clause += ">= :min"
+                else:  # max_value
+                    where_clause += "<= :max"
+            case _:
+                raise ValueError("WHERE field missing value(s)")
+
+    query = text(
+        f'SELECT {COLS} FROM "{table_name}" {where_clause} ORDER BY "{order_by}"'
+    )
     try:
         with engine.connect() as conn:
-            df = pd.read_sql(query, conn)
+            df = pd.read_sql(
+                query,
+                conn,
+                params=params,
+            )
     except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        print(e)
 
     if df.empty:
-        return JSONResponse(content=[], status_code=200)
+        return []
 
-    # 필요한 데이터만 추출
-    columns_to_keep = ["timestamp", "open", "high", "low", "close", "volume"]
-    df = df[columns_to_keep]
-
-    # NaN, inf, -inf 제거 처리
+    # inf, -inf 제거 처리
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df = df.where(pd.notnull(df), None)
-    df = df.astype(object)
 
-    # DataFrame을 리스트 딕셔너리로 변환 후 FastAPI가 인식할 수 있도록 jsonable_encoder로 변환 후 JSON 응답 반환
-    safe_data = jsonable_encoder(df.to_dict(orient="records"))
-    return JSONResponse(content=safe_data)
+    # convert timestamptz to str (ISO 8601)
+    for col in df.columns:
+        if isinstance(df[col].dtype, pd.DatetimeTZDtype):
+            # detects pandas datetime
+            df[col] = df[col].astype(str)
+
+    return df.to_dict(orient="records")
+
+
+def get_ohlcv_data(
+    symbol: str,
+    interval: str,
+    filter=None,
+    min_value=None,
+    max_value=None,
+) -> list:
+
+    table_name = f"{symbol}_{interval}".lower()
+    return_type = [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+    ]
+
+    return get_data_from_table(
+        table_name=table_name,
+        return_type=return_type,
+        filter=filter,
+        min_value=min_value,
+        max_value=max_value,
+    )
+
+
+def get_filtered_data() -> list:
+    table_name = "filtered"
+    return_type = ["entry_time", "exit_time", "symbol", "interval"]
+    return get_data_from_table(
+        table_name=table_name,
+        return_type=return_type,
+    )
