@@ -8,7 +8,7 @@ API_URL = st.secrets.get("API_URL", "http://localhost:8080")
 
 st.set_page_config(layout="wide")
 st.title("전략 기반 캔들 차트 시각화")
-st.write("저장된 전략별 백테스트 결과를 캔들 차트로 시각화합니다.")
+
 # 전략 결과 불러오기
 filtered_res = requests.get(f"{API_URL}/filtered-ohlcv")
 if filtered_res.status_code != 200:
