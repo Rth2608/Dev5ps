@@ -6,9 +6,9 @@ import os
 
 API_URL = st.secrets.get("API_URL", "http://localhost:8080")
 
-st.set_page_config(page_title="차트 분석 플랫폼", layout="wide")
-st.title("Backtesting Page")
-
+st.set_page_config(page_title="암호화폐 차트 분석 플랫폼", layout="wide")
+st.title("투자 전략 백테스트")
+st.write("선택한 코인에 대해 전략을 수립하고 백테스트를 실행합니다. 차트 기능을을 통해 시각화된 결과를 확인할 수 있습니다.")
 if "conditions" not in st.session_state:
     st.session_state.conditions = []
 if "condition_id_counter" not in st.session_state:
