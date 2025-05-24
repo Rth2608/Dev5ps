@@ -11,6 +11,27 @@ def run_conditional_lateral_backtest(
 ) -> pd.DataFrame:
     table_name = f"{symbol}_{interval}".lower()
 
+    # what_indicators 열에 해당하는 string 추출
+    indicators = [
+        "rsi",
+        "rsi_signal",
+        "ema_7",
+        "ema_25",
+        "ema_99",
+        "macd",
+        "macd_signal",
+        "boll_ma",
+        "boll_upper",
+        "boll_lower",
+        "volume_ma_20",
+        ]
+    is_indicators = [indicator for indicator in indicators if indicator in strategy_sql]
+    if not is_indicators:
+        what_indicators_str = "None"
+    else:
+        what_indicators_str = ' and '.join(sorted(is_indicators))
+
+
     query = f"""
     SELECT
         e.timestamp AS entry_time,
@@ -26,7 +47,8 @@ def run_conditional_lateral_backtest(
         END AS result,
         :symbol AS symbol, 
         :interval AS interval, 
-        '{strategy_sql}' AS strategy  
+        '{strategy_sql}' AS strategy,
+        '{what_indicators_str}' AS what_indicators
     FROM (
         SELECT timestamp, close, low
         FROM "{table_name}"
@@ -68,7 +90,8 @@ def save_result_to_table(data: pd.DataFrame):
         result TEXT,
         symbol TEXT, 
         interval TEXT,
-        strategy TEXT 
+        strategy TEXT,
+        what_indicators TEXT 
     );
     """
 
