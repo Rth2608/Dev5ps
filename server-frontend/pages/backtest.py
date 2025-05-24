@@ -16,9 +16,9 @@ if "condition_id_counter" not in st.session_state:
 
 col1, col2 = st.columns(2)
 with col1:
-    symbol = st.selectbox("Symbol", SYMBOLS, key="symbol")
+    symbol = st.selectbox("코인", SYMBOLS, key="symbol")
 with col2:
-    interval = st.selectbox("Interval", INTERVALS, key="interval")
+    interval = st.selectbox("시간 간격(h)", INTERVALS, key="interval")
 
 st.subheader("조건 설정")
 
@@ -136,7 +136,6 @@ if st.button("전략 실행 및 저장"):
         st.json(strategy_data)
 
         api_url = f"{API_URL}/save_strategy"
-
         try:
             response = requests.post(api_url, json=strategy_data)
             if response.status_code == 200:
