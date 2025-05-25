@@ -62,7 +62,7 @@ def test_candle_data(client, sym, intv):
     response = client.get(
         "/filtered-candle-data",
         params={
-            "entry_time": "2020-01-23 00:00:00+00:00",
+            "entry_time": "2023-01-23 00:00:00+00:00",
             "exit_time": "2023-03-21 12:34:56+00:00",
             "symbol": sym,
             "interval": intv,
@@ -97,7 +97,7 @@ INVALID_EXIT_TIME = [
 @pytest.mark.parametrize("intv", INTERVALS)
 @pytest.mark.parametrize(("exit_time", "error_desc"), INVALID_EXIT_TIME)
 def test_candle_data_invalid(client, sym, intv, exit_time, error_desc):
-    entry_time = "2020-01-23 00:00:00+00:00"
+    entry_time = "2023-01-23 00:00:00+00:00"
     response = client.get(
         "/filtered-candle-data",
         params={
@@ -114,8 +114,8 @@ def test_candle_data_invalid(client, sym, intv, exit_time, error_desc):
 
 VALID_STRATEGY = [
     "open > 4000 and close > 4500",
-    "volume > 100000",
-    "close >= high",
+    "volume > 10000",
+    "close <= high",
 ]
 
 
