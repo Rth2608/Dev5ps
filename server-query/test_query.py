@@ -41,6 +41,15 @@ def test_read_ohlcv_invalid(client):
 
 
 def test_filtered(client):
+    response = client.post(
+        "/save_strategy",
+        json={
+            "symbol": "BTC",
+            "interval": "4h",
+            "strategy_sql": "open > 10000",
+            "risk_reward_ratio": 5.0,  # random float
+        },
+    )
     response = client.get("/filtered-ohlcv")
     assert response.status_code == 200
     r_json = response.json()
