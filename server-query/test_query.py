@@ -46,7 +46,7 @@ def test_filtered(client):
         json={
             "symbol": "BTC",
             "interval": "4h",
-            "strategy_sql": "open > 10000",
+            "strategy_sql": "open > 1000",
             "risk_reward_ratio": 5.0,  # random float
         },
     )
@@ -62,8 +62,8 @@ def test_candle_data(client, sym, intv):
     response = client.get(
         "/filtered-candle-data",
         params={
-            "entry_time": "2023-01-23 00:00:00+00:00",
-            "exit_time": "2023-03-21 12:34:56+00:00",
+            "entry_time": "2017-08-17 05:00:00+00:00",
+            "exit_time": "2017-08-18 12:00:00+00:00",
             "symbol": sym,
             "interval": intv,
         },
@@ -82,12 +82,12 @@ def test_candle_data(client, sym, intv):
 
 
 INVALID_EXIT_TIME = [
-    ("2023-03-21 12:34:56", "Invalid time format"),  # No TZ
+    ("2023-03-21 12:00:00", "Invalid time format"),  # No TZ
     ("2023-03-21", "Invalid time format"),  # No Time
-    ("12:34:56+00", "Invalid time format"),  # No Date
+    ("12:00:00+00", "Invalid time format"),  # No Date
     ("ABCD-EF-GH IJ:KL:MN+OP", "Invalid time format"),  # random literals
     (
-        "2020-01-01 00:00:00+00:00",
+        "2017-07-15 00:00:00+00:00",
         "Entry time is ahead of Exit time",
     ),  # Ahead of entry time
 ]
@@ -97,7 +97,7 @@ INVALID_EXIT_TIME = [
 @pytest.mark.parametrize("intv", INTERVALS)
 @pytest.mark.parametrize(("exit_time", "error_desc"), INVALID_EXIT_TIME)
 def test_candle_data_invalid(client, sym, intv, exit_time, error_desc):
-    entry_time = "2023-01-23 00:00:00+00:00"
+    entry_time = ("2017-08-17 05:00:00+00:00",)
     response = client.get(
         "/filtered-candle-data",
         params={
@@ -113,8 +113,8 @@ def test_candle_data_invalid(client, sym, intv, exit_time, error_desc):
 
 
 VALID_STRATEGY = [
-    "open > 4000 and close > 4500",
-    "volume > 10000",
+    "low > 100 and high < 5000",
+    "volume < 10000",
     "close <= high",
 ]
 
