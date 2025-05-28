@@ -3,7 +3,7 @@ from shared.connect_db import engine
 import pandas as pd
 from sqlalchemy import text
 import pandas as pd
-
+import numpy as np
 
 
 def run_conditional_lateral_backtest(
@@ -70,6 +70,20 @@ def run_conditional_lateral_backtest(
     with engine.connect() as conn:
         df = pd.read_sql(text(query), conn, params={"rr_ratio": risk_reward_ratio, "symbol": symbol, "interval": interval})
 
+    # 수익률 계산
+    non_zero = df["entry_price"] != 0
+    df["profit_rate"] = np.where(
+        (df["result"] == "TP") & non_zero,
+        (df["take_profit"] - df["entry_price"]) / df["entry_price"],
+        np.where(
+            (df["result"] == "SL") & non_zero,
+            (df["stop_loss"] - df["entry_price"]) / df["entry_price"],
+            np.nan
+        )
+    )
+    # 누적 수익률 계산
+    df["cum_profit_rate"] = df["profit_rate"].fillna(0).cumsum()
+
     return df
 
 
@@ -111,4 +125,16 @@ def save_result_to_table(data: pd.DataFrame):
     data.to_sql(table_name, engine, if_exists="append", index=False)
     print(f"→ '{table_name}' 테이블에 데이터 저장 완료 (기존 데이터는 초기화)")
 
+# 승률 계산 함수
+# total_count : SL + TP의 총 개수, tp_count : TP의 개수, sl_count : SL의 개수, tp_rate : TP의 비율
+def calculate_rate(df: pd.DataFrame) -> dict:
+    total_count = df["result"].isin(["TP", "SL"]).sum()
+    tp_count = (df["result"] == "TP").sum()
+    tp_rate = tp_count / total_count if total_count > 0 else 0
 
+    return {
+        "total_count": total_count,
+        "tp_count": tp_count,
+        "sl_count": total_count - tp_count,
+        "tp_rate": tp_rate,
+    }
