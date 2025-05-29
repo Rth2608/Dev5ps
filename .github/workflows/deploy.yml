@@ -80,12 +80,12 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker-compose build --tag dev5ps:latest
+          docker-compose build
 
       
       - name: Push Docker Image
         run: |
-          docker push rth2608/dev5ps:latest
+          docker-compose push
 
       - name: Deploy
         uses: appleboy/ssh-action@v0.1.6

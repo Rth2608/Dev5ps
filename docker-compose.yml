@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: server-collect_data/Dockerfile
+    image: rth2608/collect_data
     volumes:
       - ./server-collect_data:/app/server-collect_data
       - ./shared:/app/shared
@@ -38,6 +39,7 @@ services:
     build:
       context: .
       dockerfile: server-query/Dockerfile
+    image: rth2608/query
     volumes:
       - ./server-query:/app/server-query
       - ./shared:/app/shared
@@ -58,6 +60,7 @@ services:
     build:
       context: .
       dockerfile: server-frontend/Dockerfile
+    image: rth2608/frontend
     volumes:
       - ./server-frontend:/app/server-frontend
       - ./shared:/app/shared
