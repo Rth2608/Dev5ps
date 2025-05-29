@@ -80,7 +80,7 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker-compose build rth2608/dev5ps:latest
+          docker-compose build dev5ps
 
       
       - name: Push Docker Image
