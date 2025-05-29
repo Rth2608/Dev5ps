@@ -55,7 +55,7 @@ jobs:
       #- name: Run tests
       #  run: pytest server-query/test_query.py
 
-  deploy:
+  push:
     #needs:  test
     runs-on: ubuntu-latest
     #if: success()
@@ -96,3 +96,23 @@ jobs:
           docker-compose down
           docker-compose pull
           docker-compose up -d
+
+  deploy:
+    needs: push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Login
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.SERVER_IP }}  # 서버 IP 주소
+          username: ${{ secrets.SERVER_USERNAME  }}     # SSH 사용자 이름
+          key: ${{ secrets.SERVER_SSH_KEY }}  # SSH 비밀 키
+
+      - name: pull
+        run: |
+          docker-compose down
+          docker-compose pull
+      
+      - name: deploy
+        run: docker-compose up -d
