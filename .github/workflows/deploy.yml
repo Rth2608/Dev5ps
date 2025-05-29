@@ -77,12 +77,12 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker-compose build syhan655/dev5ps:latest
+          docker-compose build rth2608/dev5ps:latest
 
       
       - name: Push Docker Image
         run: |
-          docker push syhan655/dev5ps:latest
+          docker push rth2608/dev5ps:latest
 
       - name: Deploy
         uses: appleboy/ssh-action@v0.1.6
