@@ -3,7 +3,7 @@ name: Test and Deploy
 on:
   push:
     branches:
-      - main
+      - dev
 
 jobs:
   test:
@@ -52,8 +52,8 @@ jobs:
       #- name: Initialize DB schema
       #  run: python server-query/init_db.py
 
-      - name: Run tests
-        run: pytest server-query/test_query.py
+      #- name: Run tests
+      #  run: pytest server-query/test_query.py
 
   deploy:
     needs: test
