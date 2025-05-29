@@ -84,7 +84,7 @@ jobs:
           host: ${{ secrets.SERVER_IP }}  # 서버 IP 주소
           username: ${{ secrets.SERVER_USERNAME  }}     # SSH 사용자 이름
           key: ${{ secrets.SSH_KEY }}  # SSH 비밀 키
-          script: |
-            echo "${{ secrets.postgreSQL }}" >> .env
-            docker-compose down
-            docker-compose up build
+        script: |
+          echo "${{ secrets.postgreSQL }}" >> .env
+          docker-compose down
+          docker-compose up build
