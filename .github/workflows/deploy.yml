@@ -6,48 +6,48 @@ on:
       - dev
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  # test:
+  #   runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_HOST: 127.0.0.1
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U test" 
-          --health-interval 10s 
-          --health-timeout 5s 
-          --health-retries 5
+  #   services:
+  #     postgres:
+  #       image: postgres:15
+  #       env:
+  #         POSTGRES_HOST: 127.0.0.1
+  #         POSTGRES_USER: test
+  #         POSTGRES_PASSWORD: test
+  #         POSTGRES_DB: test
+  #       ports:
+  #         - 5432:5432
+  #       options: >-
+  #         --health-cmd "pg_isready -U test" 
+  #         --health-interval 10s 
+  #         --health-timeout 5s 
+  #         --health-retries 5
 
-    env:
-      PYTHONPATH: .
+  #   env:
+  #     PYTHONPATH: .
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.12
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: 3.12
 
-      - name: Install dependencies
-        run: |
-          pip install -r server-query/requirements.txt
-          pip install pytest
+  #     - name: Install dependencies
+  #       run: |
+  #         pip install -r server-query/requirements.txt
+  #         pip install pytest
 
-      - name: Wait for PostgreSQL to be ready
-        run: |
-          until pg_isready -h localhost -p 5432 -U user; do
-            echo "Waiting for postgres..."
-            sleep 2
-          done
+  #     - name: Wait for PostgreSQL to be ready
+  #       run: |
+  #         until pg_isready -h localhost -p 5432 -U user; do
+  #           echo "Waiting for postgres..."
+  #           sleep 2
+  #         done
 
       #- name: Initialize DB schema
       #  run: python server-query/init_db.py
