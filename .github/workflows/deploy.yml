@@ -1,0 +1,95 @@
+name: Test and Deploy
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+
+    env:
+      PYTHONPATH: .
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          pip install -r server-query/requirements.txt
+          pip install pytest
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U user; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
+      #- name: Initialize DB schema
+      #  run: python server-query/init_db.py
+
+      - name: Run tests
+        run: pytest server-query/test_query.py
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Install Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install - docker-compose
+
+      - name: Build Docker Image
+        run: |
+          docker-compose build syhan655/dev5ps:latest
+
+      
+      - name: Push Docker Image
+        run: |
+          docker push syhan655/dev5ps:latest
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.SERVER_IP }}  # 서버 IP 주소
+          username: ${{ secrets.SERVER_USERNAME  }}     # SSH 사용자 이름
+          key: ${{ secrets.SSH_KEY }}  # SSH 비밀 키
+          script: |
+            docker-compose down
+            docker-compose up build
