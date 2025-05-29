@@ -80,12 +80,12 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker compose build dev5ps
+          docker-compose build --tag Dev5ps:latest
 
       
       - name: Push Docker Image
         run: |
-          docker push rth2608/dev5ps:latest
+          docker push rth2608/Dev5ps:latest
 
       - name: Deploy
         uses: appleboy/ssh-action@v0.1.6
@@ -94,5 +94,5 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME  }}     # SSH 사용자 이름
           key: ${{ secrets.SSH_KEY }}  # SSH 비밀 키
           script: |
-            docker compose down
-            docker compose up build
+            docker-compose down
+            docker-compose up build
