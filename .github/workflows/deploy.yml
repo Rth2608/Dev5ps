@@ -56,7 +56,7 @@ jobs:
       #  run: pytest server-query/test_query.py
 
   deploy:
-    #needs: test
+    #needs:  test
     runs-on: ubuntu-latest
     #if: success()
 
