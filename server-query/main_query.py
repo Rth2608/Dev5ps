@@ -176,7 +176,6 @@ def get_filtered_tp_sl_rate():
             "sl_count": sl_count,
             "tp_rate": tp_count / total_count,
         }
-
     except Exception as e:
         print(repr(e))
         raise HTTPException(
