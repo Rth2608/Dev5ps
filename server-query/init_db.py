@@ -43,33 +43,24 @@ for table, rows in ohlcv_data.items():
         rows,
     )
 
-# ⚙️ 전략 저장용 테이블 생성
-cur.execute("DROP TABLE IF EXISTS strategy")
-cur.execute(
-    """
-    CREATE TABLE strategy (
-        id SERIAL PRIMARY KEY,
-        symbol TEXT NOT NULL,
-        interval TEXT NOT NULL,
-        strategy_sql TEXT NOT NULL,
-        risk_reward_ratio FLOAT NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-"""
-)
 
 # ⚙️ 전략 실행 결과 저장용 filtered 테이블 생성 (🛠️ 필수 컬럼 포함)
 cur.execute("DROP TABLE IF EXISTS filtered")
 cur.execute(
     """
     CREATE TABLE filtered (
-        entry_time TIMESTAMPTZ,
-        entry_price NUMERIC,
-        stop_loss NUMERIC,
-        take_profit NUMERIC,
+        entry_time TIMESTAMPTZ PRIMARY KEY,
+        entry_price DOUBLE PRECISION,
+        stop_loss DOUBLE PRECISION,
+        take_profit DOUBLE PRECISION,
         exit_time TIMESTAMPTZ,
-        symbol TEXT,
-        interval TEXT
+        result TEXT,
+        symbol TEXT, 
+        interval TEXT,
+        strategy TEXT,
+        what_indicators TEXT,
+        profit_rate DOUBLE PRECISION,
+        cum_profit_rate DOUBLE PRECISION
     )
 """
 )
