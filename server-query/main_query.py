@@ -154,7 +154,7 @@ def get_filtered_profit_rate():
         )
 
 
-@app.get("/filtered-count-rate")
+@app.get("/filtered-tp-sl-rate")
 def get_filtered_tp_sl_rate():
     try:
         data = get_data_from_table(
