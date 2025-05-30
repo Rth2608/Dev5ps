@@ -105,7 +105,9 @@ def save_result_to_table(data: pd.DataFrame):
         symbol TEXT, 
         interval TEXT,
         strategy TEXT,
-        what_indicators TEXT 
+        what_indicators TEXT,
+        profit_rate DOUBLE PRECISION,
+        cum_profit_rate DOUBLE PRECISION
     );
     """
 
