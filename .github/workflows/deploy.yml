@@ -110,7 +110,10 @@ jobs:
             sudo chmod +x /usr/local/bin/docker-compose
             docker-compose --version
 
-            cd ./Dev5ps
+            cd ~/Dev5ps
+            git fetch origin dev
+            git reset --hard origin/dev
+
             docker-compose down
             docker-compose pull
 
@@ -136,5 +139,8 @@ jobs:
             sudo chmod +x /usr/local/bin/docker-compose
             docker-compose --version
 
-            cd ./Dev5ps
+            cd ~/Dev5ps
+            git fetch origin dev
+            git reset --hard origin/dev
+
             docker-compose up -d
