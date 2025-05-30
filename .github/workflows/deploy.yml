@@ -40,6 +40,16 @@ jobs:
           pip install -r server-query/requirements.txt
           pip install pytest
 
+      - name: Create .env for test DB
+        run: |
+          cat <<EOF > .env
+          POSTGRES_HOST=localhost
+          POSTGRES_PORT=5432
+          POSTGRES_DB=test
+          POSTGRES_USER=test
+          POSTGRES_PASSWORD=test
+          EOF
+
       - name: Wait for PostgreSQL to be ready
         run: |
           until pg_isready -h localhost -p 5432 -U test; do
@@ -70,7 +80,6 @@ jobs:
           POSTGRES_USER=${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           EOF
-
 
       - name: Install Docker Compose
         run: |
