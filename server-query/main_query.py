@@ -129,7 +129,13 @@ def save_strategy(req: StrategyRequest):
             risk_reward_ratio=req.risk_reward_ratio,
         )
         save_result_to_table(result_df)
-        return {"message": "전략 실행 및 결과 저장 완료", "rows": len(result_df)}
+        if result_df.empty:
+            return {"message": "전략 실행, 결과 없음"}
+        return {
+            "message": "전략 실행 및 결과 저장 완료",
+            "rows": len(result_df),
+            "total_profit_rate": result_df["cum_profit_rate"].iloc[-1],
+        }
     except Exception as e:
         print(repr(e))
         raise HTTPException(
