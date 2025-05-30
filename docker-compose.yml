@@ -69,7 +69,7 @@ services:
     environment:
       - TZ=Asia/Seoul
       - PYTHONPATH=/app:/app/server-frontend
-      - API_URL=http://query:8080
+      - API_URL=http://query:8082
     ports:
       - "8501:8501"
     depends_on:

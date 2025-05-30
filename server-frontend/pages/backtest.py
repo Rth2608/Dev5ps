@@ -4,7 +4,7 @@ import re
 import requests
 import os
 
-API_URL = st.secrets.get("API_URL", "http://localhost:8080")
+API_URL = st.secrets.get("API_URL", "http://localhost:8082")
 
 st.set_page_config(page_title="암호화폐 차트 분석 플랫폼", layout="wide")
 st.title("투자 전략 백테스트")
