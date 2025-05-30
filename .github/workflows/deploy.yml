@@ -117,5 +117,5 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /your/project/path  # 실제 경로로 변경
+            cd /your/project/path
             docker-compose up -d
