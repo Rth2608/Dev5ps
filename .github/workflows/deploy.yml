@@ -117,5 +117,5 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /your/project/path
+            cd ./Dev5ps
             docker-compose up -d
