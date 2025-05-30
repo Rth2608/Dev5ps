@@ -136,3 +136,43 @@ def save_strategy(req: StrategyRequest):
             status_code=500,
             detail="Error while running strategy",
         )
+
+
+@app.get("/filtered-profit-rate")
+def get_filtered_profit_rate():
+    try:
+        data = get_data_from_table(
+            table_name="filtered",
+            return_type=["profit_rate", "cum_profit_rate"],
+        )
+        return jsonable_encoder(data)
+    except Exception as e:
+        print(repr(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
+
+
+@app.get("/filtered-count-rate")
+def get_filtered_tp_sl_rate():
+    try:
+        data = get_data_from_table(
+            table_name="filtered",
+            return_type="result",
+        )
+        tp_count = data.count({"result": "TP"})
+        sl_count = data.count({"result": "SL"})
+        total_count = tp_count + sl_count
+        return {
+            "total_count": total_count,
+            "tp_count": tp_count,
+            "sl_count": sl_count,
+            "tp_rate": tp_count / total_count,
+        }
+    except Exception as e:
+        print(repr(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
