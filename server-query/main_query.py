@@ -149,7 +149,7 @@ def get_filtered_profit_rate():
     try:
         data = get_data_from_table(
             table_name="filtered",
-            return_type=["profit_rate", "cum_profit_rate"],
+            return_type=["entry_time", "profit_rate", "cum_profit_rate"],
         )
         return jsonable_encoder(data)
     except Exception as e:
