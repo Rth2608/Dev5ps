@@ -4,7 +4,7 @@ import base64
 import json
 from datetime import datetime
 
-API_URL = st.secrets.get("API_URL", "http://localhost:8080")
+API_URL = st.secrets.get("API_URL", "http://localhost:8082")
 
 st.set_page_config(layout="wide")
 st.title("전략 기반 캔들 차트 시각화")
