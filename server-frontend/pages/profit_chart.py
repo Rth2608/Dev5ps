@@ -32,5 +32,5 @@ if not filtered_data:
     st.stop()
 
 a, b = st.columns(2)
-a.matric(label = "총 실행 횟수", value = filtered_tp_data["total_count"])
-b.matric(label = "누적 승률", value = filtered_tp_data["tp_rate"])
+a.metric(label = "총 실행 횟수", value = filtered_tp_data["total_count"])
+b.metric(label = "누적 승률", value = filtered_tp_data["tp_rate"])
