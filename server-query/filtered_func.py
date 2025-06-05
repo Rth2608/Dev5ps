@@ -78,11 +78,12 @@ def run_conditional_lateral_backtest(
         np.where(
             (df["result"] == "SL") & non_zero,
             (df["stop_loss"] - df["entry_price"]) / df["entry_price"],
-            np.nan
+            0.0
         )
     )
     # 누적 수익률 계산
-    df["cum_profit_rate"] = df["profit_rate"].fillna(0).cumsum()
+    df["cum_profit_rate"] = (1 + df["profit_rate"].fillna(0)).cumprod() - 1
+    df[["profit_rate", "cum_profit_rate"]] = df[["profit_rate", "cum_profit_rate"]] * 100
 
     return df
 
@@ -127,16 +128,103 @@ def save_result_to_table(data: pd.DataFrame):
     data.to_sql(table_name, engine, if_exists="append", index=False)
     print(f"→ '{table_name}' 테이블에 데이터 저장 완료 (기존 데이터는 초기화)")
 
-# 승률 계산 함수
-# total_count : SL + TP의 총 개수, tp_count : TP의 개수, sl_count : SL의 개수, tp_rate : TP의 비율
-def calculate_rate(df: pd.DataFrame) -> dict:
+# 통계량 계산
+def calculate_statics() -> dict:
+    table_name = "filtered"
+    query = f'SELECT * FROM "{table_name}"'
+
+    
+    with engine.connect() as conn:
+        df = pd.read_sql(text(query), conn)
+
+        
+    if df.empty:
+        return {
+        "total_count": 0,
+        "tp_count": 0,
+        "sl_count": 0,
+        "tp_rate": 0.0,
+        "expectancy": 0.0,
+        "profit_mean": 0.0,
+        "profit_std": 0.0,
+        "profit_min": 0.0,
+        "profit_max": 0.0,
+        "loss_mean": 0.0,
+        "loss_std": 0.0,
+        "loss_min": 0.0,
+        "loss_max": 0.0,
+        "profit_rate_mean": 0.0,
+        "profit_rate_std": 0.0,
+        "profit_rate_min": 0.0,
+        "profit_rate_max": 0.0,
+        "expectancy": 0.0,
+        "mdd": 0.0,
+        "low_time": None,
+        "high_time": None,
+        "final_profit_rate": 0.0
+        }
+
     total_count = df["result"].isin(["TP", "SL"]).sum()
     tp_count = (df["result"] == "TP").sum()
-    tp_rate = tp_count / total_count if total_count > 0 else 0
+    sl_count = (df["result"] == "SL").sum()
+    tp_rate = tp_count*100 / total_count if total_count > 0 else 0
+
+
+    df_profit = df[df["result"] == "TP"]["profit_rate"]
+    profit_mean = df_profit.mean() if not df_profit.empty else 0.0
+    profit_std = df_profit.std() if len(df_profit) >= 2 else 0.0  
+    profit_min = df_profit.min() if not df_profit.empty else 0.0
+    profit_max = df_profit.max() if not df_profit.empty else 0.0 
+
+
+    df_loss = df[df["result"] == "SL"]["profit_rate"]
+    loss_mean = df_loss.mean() if not df_loss.empty else 0.0
+    loss_std  = df_loss.std()  if len(df_loss) >= 2 else 0.0
+    loss_min  = df_loss.min()  if not df_loss.empty else 0.0
+    loss_max  = df_loss.max()  if not df_loss.empty else 0.0
+    
+    df_rate= df[df["result"].isin(["TP", "SL"])]
+    profit_rate_mean = df_rate["profit_rate"].mean() if not df_rate.empty else 0.0
+    profit_rate_std = df_rate["profit_rate"].std() if len(df_rate) >= 2 else 0.0
+    profit_rate_min = df_rate["profit_rate"].min() if not df_rate.empty else 0.0
+    profit_rate_max = df_rate["profit_rate"].max() if not df_rate.empty else 0.0
+    
+    expectancy = (tp_count * profit_mean + sl_count * loss_mean) / total_count if total_count > 0 else 0.0
+
+    cum_max = df["cum_profit_rate"].cummax()
+    drawdown = df["cum_profit_rate"] - cum_max
+    low_idx = drawdown.idxmin()
+    high_idx = df.loc[:low_idx, "cum_profit_rate"].idxmax()
+    low_price = df.loc[low_idx, "cum_profit_rate"]*0.01+1
+    high_price = df.loc[high_idx, "cum_profit_rate"]*0.01+1
+    mdd = (low_price - high_price)*100 / high_price if high_price != 0 else -100.0
+    low_time = df.loc[low_idx, "entry_time"]
+    high_time = df.loc[high_idx, "entry_time"]
+    low_time_str = low_time.date().isoformat() if isinstance(low_time, pd.Timestamp) else None
+    high_time_str = high_time.date().isoformat() if isinstance(high_time, pd.Timestamp) else None
+
+    final_profit_rate = df["cum_profit_rate"].iloc[-1]
 
     return {
-        "total_count": total_count,
-        "tp_count": tp_count,
-        "sl_count": total_count - tp_count,
-        "tp_rate": tp_rate,
-    }
+    "total_count": int(total_count),
+    "tp_count": int(tp_count),
+    "sl_count": int(sl_count),
+    "tp_rate": float(tp_rate),
+    "profit_mean": float(profit_mean),
+    "profit_std": float(profit_std),
+    "profit_min": float(profit_min),
+    "profit_max": float(profit_max),
+    "loss_mean": float(loss_mean),
+    "loss_std": float(loss_std),
+    "loss_min": float(loss_min),
+    "loss_max": float(loss_max),
+    "profit_rate_mean": float(profit_rate_mean),
+    "profit_rate_std": float(profit_rate_std),
+    "profit_rate_min": float(profit_rate_min),
+    "profit_rate_max": float(profit_rate_max),
+    "expectancy": float(expectancy),
+    "mdd": float(mdd),
+    "low_time": low_time_str,    
+    "high_time": high_time_str,
+    "final_profit_rate": final_profit_rate
+}
