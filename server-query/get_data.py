@@ -69,6 +69,9 @@ def get_data_from_table(
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df = df.where(pd.notnull(df), None)
 
+    # omit row with NULL value
+    df = df.dropna(how='any', axis=0)
+
     # convert timestamptz to str (ISO 8601)
     for col in df.columns:
         if isinstance(df[col].dtype, pd.DatetimeTZDtype):
