@@ -5,11 +5,20 @@ import altair as alt
 API_URL = st.secrets.get("API_URL", "http://localhost:8080")
 
 st.set_page_config(layout="wide")
-st.title("백테스트 승률 시각화")
-st.markdown("현재까지 실행한 백테스트의 결과를 한 눈에 확인할 수 있습니다.")
+st.title("백테스트 결과")
 
+res = requests.get(f"{API_URL}/filtered-time-range")
+if res.status_code == 200:
+    time_range = res.json()
+    start_str = time_range["start_time"][:10]  # YYYY-MM-DD
+    end_str = time_range["end_time"][:10]
+    st.markdown(
+        f"현재까지 실행한 백테스트의 결과를 **{start_str} ~ {end_str}** 기간 동안 한 눈에 확인할 수 있습니다."
+    )
+else:
+    st.warning("기간 정보를 불러올 수 없습니다.")
 
-st.header("📈 누적 수익률 그래프")
+st.header("누적 수익률 (%)")
 filtered_res = requests.get(f"{API_URL}/filtered-profit-rate")
 if filtered_res.status_code != 200:
     st.error(f"전략 목록 불러오기 실패: {filtered_res.status_code}")
@@ -20,15 +29,30 @@ if not filtered_data:
     st.warning("저장된 전략 결과가 없습니다.")
     st.stop()
 
-chart = alt.Chart(alt.Data(values=filtered_data)).mark_line(
-    color='#FF4B4B', strokeWidth=2
-).encode(
-    x=alt.X('entry_time:T', axis=alt.Axis(title='진입 시간')),
-    y=alt.Y('cum_profit_rate:Q', axis=alt.Axis(format='.2f'), title='누적 수익률 (%)')
-).properties(
-    width='container',
-    height=400
+chart = (
+    alt.Chart(alt.Data(values=filtered_data))
+    .mark_line(color="#FF4B4B", strokeWidth=2)
+    .encode(
+        x=alt.X(
+            "entry_time:T",
+            axis=alt.Axis(
+                title=None,  # ❌ "진입 시간" 제거
+                labels=False,  # ❌ 날짜 레이블 숨김
+                ticks=False,  # ❌ 눈금선 숨김
+                domain=False,  # ❌ 축선도 숨김
+            ),
+        ),
+        y=alt.Y(
+            "cum_profit_rate:Q",
+            axis=alt.Axis(
+                format=".2f",
+                title=None,  # ❌ "%" 제거
+            ),
+        ),
+    )
+    .properties(width=800, height=400)
 )
+
 
 st.altair_chart(chart, use_container_width=True)
 
