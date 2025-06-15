@@ -15,23 +15,20 @@ def run_conditional_lateral_backtest(
 ) -> pd.DataFrame:
     table_name = f"{symbol}_{interval}".lower()
 
-    # 사용된 지표 추출
-    indicators = [
-        "rsi",
-        "rsi_signal",
-        "ema_7",
-        "ema_25",
-        "ema_99",
-        "macd",
-        "macd_signal",
-        "boll_ma",
-        "boll_upper",
-        "boll_lower",
-        "volume_ma_20",
+    # ✅ 압축된 지표 그룹 추출
+    groups = [
+        ("rsi", ["rsi", "rsi_signal"]),
+        ("ema_7", ["ema_7"]),
+        ("ema_25", ["ema_25"]),
+        ("ema_99", ["ema_99"]),
+        ("macd", ["macd", "macd_signal"]),
+        ("boll", ["boll_ma", "boll_upper", "boll_lower"]),
     ]
-    is_indicators = [i for i in indicators if i in strategy_sql]
+    used_indicators = [
+        name for name, keywords in groups if any(k in strategy_sql for k in keywords)
+    ]
     what_indicators_str = (
-        " and ".join(sorted(is_indicators)) if is_indicators else "None"
+        " and ".join(sorted(used_indicators)) if used_indicators else "None"
     )
 
     # 기간 필터 조건 추가

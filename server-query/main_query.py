@@ -12,9 +12,9 @@ from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from datetime import datetime as dt
 from shared.connect_db import engine
-from sqlalchemy import text
+from sqlalchemy import text, select, distinct
 from typing import Optional
-
+import math
 
 app = FastAPI()
 
@@ -185,3 +185,116 @@ def get_filtered_entry_time_range():
     except Exception as e:
         print(repr(e))
         raise HTTPException(status_code=500, detail="DB 조회 실패")
+
+
+@app.get("/what-indicators")
+def get_distinct_indicators():
+    query = "SELECT DISTINCT what_indicators FROM filtered"
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(text(query)).fetchall()
+
+        # 모든 지표 문자열에서 분해 → 중복 제거
+        indicator_set = set()
+        for row in rows:
+            indicators = row[0]  # 문자열: "ema_7 and rsi and macd"
+            if indicators:
+                parts = [i.strip() for i in indicators.split("and")]
+                indicator_set.update(parts)
+
+        return {"indicators": sorted(indicator_set)}
+    except Exception as e:
+        print(repr(e))
+        raise HTTPException(status_code=500, detail="보조지표 목록 조회 실패")
+
+
+@app.get("/indicator-data")
+def get_indicator_data(
+    symbol: str, interval: str, indicator: str, entry_time: str, exit_time: str
+):
+    table_name = f"{symbol}_{interval}".lower()
+
+    # ✅ 확장 매핑
+    indicator_map = {
+        "boll": ["boll_upper", "boll_lower", "boll_ma"],
+        "rsi": ["rsi", "rsi_signal"],
+        "macd": ["macd", "macd_signal"],
+    }
+    columns = indicator_map.get(indicator, [indicator])  # 기본 단일 컬럼
+
+    # ✅ SQL 쿼리 동적 생성
+    cols_str = ", ".join(f'"{col}"' for col in ["timestamp"] + columns)
+    query = text(
+        f"""
+        SELECT {cols_str}
+        FROM "{table_name}"
+        WHERE timestamp BETWEEN :start AND :end
+        ORDER BY timestamp
+    """
+    )
+
+    try:
+        with engine.connect() as conn:
+            rows = (
+                conn.execute(query, {"start": entry_time, "end": exit_time})
+                .mappings()
+                .all()
+            )
+
+        results = []
+        seen = set()
+        for row in rows:
+            timestamp = row["timestamp"]
+            for col in columns:
+                val = row[col]
+                if isinstance(val, float) and (math.isinf(val) or math.isnan(val)):
+                    continue
+                key = (timestamp, col)
+                if key in seen:
+                    continue
+                seen.add(key)
+                results.append(
+                    {
+                        "timestamp": timestamp.isoformat(),
+                        "value": val,
+                        "plot_area": (
+                            "main"
+                            if col.startswith("ema") or col.startswith("boll")
+                            else "sub"
+                        ),
+                        "name": col,
+                    }
+                )
+
+        return jsonable_encoder(results)
+
+    except Exception as e:
+        print(repr(e))
+        raise HTTPException(status_code=500, detail=f"지표({indicator}) 조회 실패")
+
+
+@app.get("/filtered-indicators")
+def get_indicators_in_range(entry_time: str, exit_time: str):
+    query = text(
+        """
+        SELECT DISTINCT what_indicators FROM filtered
+        WHERE entry_time BETWEEN :start AND :end
+    """
+    )
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(
+                query, {"start": entry_time, "end": exit_time}
+            ).fetchall()
+
+        indicator_set = set()
+        for row in rows:
+            val = row[0]
+            if val:
+                parts = [i.strip() for i in val.split("and")]
+                indicator_set.update(parts)
+
+        return {"what_indicators": " and ".join(sorted(indicator_set))}
+    except Exception as e:
+        print(repr(e))
+        raise HTTPException(status_code=500, detail="보조지표 범위 조회 실패")
