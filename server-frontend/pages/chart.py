@@ -12,6 +12,10 @@ st.title("전략 기반 캔들 차트 시각화")
 # 전략 목록 가져오기
 res = requests.get(f"{API_URL}/filtered-ohlcv")
 filtered_data = res.json() if res.status_code == 200 else []
+
+# ✅ 최신 entry_time 기준 내림차순 정렬
+filtered_data.sort(key=lambda x: x["entry_time"], reverse=True)
+
 if not filtered_data:
     st.info("전략 데이터가 없습니다.")
     st.stop()
