@@ -164,7 +164,6 @@ if st.button("전략 실행 및 저장"):
         )
         end_dt_str = datetime.combine(end_date, end_time).strftime("%Y-%m-%d %H:%M:%S")
 
-        # 요청 JSON 구성
         strategy_data = {
             "symbol": symbol,
             "interval": interval,
