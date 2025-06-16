@@ -214,7 +214,6 @@ def get_indicator_data(
 ):
     table_name = f"{symbol}_{interval}".lower()
 
-    # ✅ 확장 매핑
     indicator_map = {
         "boll": ["boll_upper", "boll_lower", "boll_ma"],
         "rsi": ["rsi", "rsi_signal"],
@@ -222,7 +221,6 @@ def get_indicator_data(
     }
     columns = indicator_map.get(indicator, [indicator])  # 기본 단일 컬럼
 
-    # ✅ SQL 쿼리 동적 생성
     cols_str = ", ".join(f'"{col}"' for col in ["timestamp"] + columns)
     query = text(
         f"""

@@ -10,7 +10,7 @@ st.title("백테스트 결과")
 res = requests.get(f"{API_URL}/filtered-time-range")
 if res.status_code == 200:
     time_range = res.json()
-    start_str = time_range["start_time"][:10]  # YYYY-MM-DD
+    start_str = time_range["start_time"][:10]
     end_str = time_range["end_time"][:10]
     st.markdown(
         f"현재까지 실행한 백테스트의 결과를 **{start_str} ~ {end_str}** 기간 동안 한 눈에 확인할 수 있습니다."

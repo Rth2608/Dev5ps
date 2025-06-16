@@ -10,7 +10,7 @@ cur = conn.cursor()
 # 테이블 이름 목록
 tables = ["btc_1h", "btc_4h", "eth_1h", "eth_4h"]
 
-# 🔄 개별 심볼+interval 테이블 생성 및 초기화
+
 for table in tables:
     cur.execute(f"DROP TABLE IF EXISTS {table}")
     cur.execute(

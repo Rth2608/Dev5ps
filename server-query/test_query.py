@@ -132,7 +132,7 @@ def test_strategy(client, sym, intv, strategy):
             "symbol": sym,
             "interval": intv,
             "strategy_sql": strategy,
-            "risk_reward_ratio": 5.0,  # random float
+            "risk_reward_ratio": 5.0,
             "start_time": "2017-08-17 04:00:00",
             "end_time": "2025-06-16 03:00:00",
         },

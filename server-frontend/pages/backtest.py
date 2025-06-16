@@ -159,7 +159,6 @@ if st.button("전략 실행 및 저장"):
             conditions_str.append(f"{left} {op} {right}")
         strategy_sql = " and ".join(conditions_str)
 
-        # 시작/종료 시간 합치기
         start_dt_str = datetime.combine(start_date, start_time).strftime(
             "%Y-%m-%d %H:%M:%S"
         )

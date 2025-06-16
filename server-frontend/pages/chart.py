@@ -158,7 +158,7 @@ for name, rows in indicator_data.items():
     else:
         main_series.append((name, encoded))
 
-# HTML 삽입
+
 ohlc_b64 = base64.b64encode(json.dumps(ohlc_data).encode()).decode()
 vol_b64 = base64.b64encode(json.dumps(volume_data).encode()).decode()
 main_js = "\n".join(

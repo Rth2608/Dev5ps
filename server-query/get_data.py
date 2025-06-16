@@ -65,7 +65,6 @@ def get_data_from_table(
     if df.empty:
         return []
 
-    # inf, -inf 제거 처리
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df = df.where(pd.notnull(df), None)
 
