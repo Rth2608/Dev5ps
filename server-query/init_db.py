@@ -1,26 +1,26 @@
 import psycopg2
-import os
+from datetime import datetime, timedelta
 
-# 환경변수 기반 설정 (GitHub Actions에서도 적용됨)
-DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
-DB_PORT = os.getenv("POSTGRES_PORT", "5432")
-DB_NAME = os.getenv("POSTGRES_DB", "test")
-DB_USER = os.getenv("POSTGRES_USER", "test")
-DB_PASS = os.getenv("POSTGRES_PASSWORD", "test")
+# 심볼과 인터벌
+SYMBOLS = ["BTC", "ETH", "XRP", "SOL"]
+INTERVALS = ["15m", "1h", "4h", "1d"]
 
 conn = psycopg2.connect(
-    host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASS
+    host="localhost",
+    port="5432",
+    dbname="postgres",
+    user="postgres",
+    password="yourpassword",
 )
-
 cur = conn.cursor()
 
-tables = ["btc_1h", "btc_4h", "eth_1h", "eth_4h"]
 
-for table in tables:
-    cur.execute(f"DROP TABLE IF EXISTS {table}")
+# 테이블 생성 함수
+def create_table(table_name):
+    cur.execute(f"DROP TABLE IF EXISTS {table_name}")
     cur.execute(
         f"""
-        CREATE TABLE {table} (
+        CREATE TABLE {table_name} (
             timestamp TIMESTAMPTZ PRIMARY KEY,
             open NUMERIC,
             high NUMERIC,
@@ -31,38 +31,49 @@ for table in tables:
     """
     )
 
-ohlcv_data = {
-    "btc_1h": [("2017-08-17 05:00:00+00", 1000, 1100, 900, 1050, 5000)],
-    "btc_4h": [("2017-08-17 05:00:00+00", 1001, 1500, 900, 1200, 5000)],
-    "eth_1h": [("2017-08-17 05:00:00+00", 300, 400, 250, 350, 2000)],
-    "eth_4h": [("2017-08-17 05:00:00+00", 300, 500, 250, 400, 3000)],
-}
 
-for table, rows in ohlcv_data.items():
-    cur.executemany(
-        f"""
-        INSERT INTO {table} (timestamp, open, high, low, close, volume)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """,
-        rows,
-    )
+# 샘플 데이터 생성
+def generate_ohlcv(start_time, count, open_base):
+    return [
+        (
+            (start_time + timedelta(minutes=15 * i)).isoformat(),
+            open_base + i,
+            open_base + i + 10,
+            open_base + i - 5,
+            open_base + i + 3,
+            1000 + i * 10,
+        )
+        for i in range(count)
+    ]
 
+
+# 모든 테이블 생성 및 샘플 데이터 삽입
+start_time = datetime(2017, 8, 17, 0, 0)
+
+for sym in SYMBOLS:
+    for intv in INTERVALS:
+        table = f"{sym.lower()}_{intv}"
+        create_table(table)
+        data = generate_ohlcv(start_time, 40, 1000)
+        for row in data:
+            cur.execute(
+                f"""
+                INSERT INTO {table} (timestamp, open, high, low, close, volume)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                row,
+            )
+
+# filtered 테이블도 미리 생성
 cur.execute("DROP TABLE IF EXISTS filtered")
 cur.execute(
     """
     CREATE TABLE filtered (
-        entry_time TIMESTAMPTZ PRIMARY KEY,
-        entry_price DOUBLE PRECISION,
-        stop_loss DOUBLE PRECISION,
-        take_profit DOUBLE PRECISION,
+        entry_time TIMESTAMPTZ,
         exit_time TIMESTAMPTZ,
-        result TEXT,
-        symbol TEXT, 
+        symbol TEXT,
         interval TEXT,
-        strategy TEXT,
-        what_indicators TEXT,
-        profit_rate DOUBLE PRECISION,
-        cum_profit_rate DOUBLE PRECISION
+        PRIMARY KEY (entry_time, exit_time, symbol, interval)
     )
 """
 )
@@ -70,3 +81,4 @@ cur.execute(
 conn.commit()
 cur.close()
 conn.close()
+print("✅ All test tables created.")
