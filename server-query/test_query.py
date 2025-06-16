@@ -1,18 +1,20 @@
 import sys
 import os
 import subprocess
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import pytest
 from fastapi.testclient import TestClient
 from shared.symbols_intervals import SYMBOLS, INTERVALS
 from main_query import app
 
+# sys.path 수정
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 
 # ✅ DB 초기화: 테스트 실행 전 init_db.py 실행
 @pytest.fixture(scope="session", autouse=True)
 def setup_database():
-    result = subprocess.run(["python", "init_db.py"], capture_output=True, text=True)
+    init_db_path = os.path.join(os.path.dirname(__file__), "init_db.py")
+    result = subprocess.run(["python", init_db_path], capture_output=True, text=True)
     assert result.returncode == 0, f"DB 초기화 실패:\n{result.stderr}"
 
 
@@ -41,10 +43,8 @@ def test_read_ohlcv(client, sym, intv):
 
 # ✅ 잘못된 심볼/인터벌 테스트
 def test_read_ohlcv_invalid(client):
-    response = client.get(f"/ohlcv/XRP/1h")
-    assert response.status_code == 400
-    response = client.get(f"/ohlcv/BTC/2h")
-    assert response.status_code == 400
+    assert client.get("/ohlcv/XRP/1h").status_code == 400
+    assert client.get("/ohlcv/BTC/2h").status_code == 400
 
 
 # ✅ 전략 실행 후 filtered 테이블 조회 테스트
@@ -147,10 +147,7 @@ def test_strategy(client, sym, intv, strategy):
     )
     assert response.status_code == 200
     r_json = response.json()
-    assert r_json["message"] in [
-        "전략 실행 및 결과 저장 완료",
-        "전략 실행, 결과 없음",
-    ]
+    assert r_json["message"] in ["전략 실행 및 결과 저장 완료", "전략 실행, 결과 없음"]
 
 
 # ✅ 잘못된 전략 테스트
