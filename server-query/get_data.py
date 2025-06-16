@@ -70,7 +70,7 @@ def get_data_from_table(
     df = df.where(pd.notnull(df), None)
 
     # omit row with NULL value
-    df = df.dropna(how='any', axis=0)
+    df = df.dropna(how="any", axis=0)
 
     # convert timestamptz to str (ISO 8601)
     for col in df.columns:
@@ -110,7 +110,15 @@ def get_ohlcv_data(
 
 def get_filtered_data() -> list:
     table_name = "filtered"
-    return_type = ["entry_time", "exit_time", "symbol", "interval"]
+    return_type = [
+        "entry_time",
+        "exit_time",
+        "symbol",
+        "interval",
+        "entry_price",
+        "stop_loss",
+        "take_profit",
+    ]
     return get_data_from_table(
         table_name=table_name,
         return_type=return_type,

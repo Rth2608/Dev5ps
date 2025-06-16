@@ -12,13 +12,12 @@ st.title("전략 기반 캔들 차트 시각화")
 # 전략 목록 가져오기
 res = requests.get(f"{API_URL}/filtered-ohlcv")
 filtered_data = res.json() if res.status_code == 200 else []
-
-# ✅ 최신 entry_time 기준 내림차순 정렬
-filtered_data.sort(key=lambda x: x["entry_time"], reverse=True)
-
 if not filtered_data:
     st.info("전략 데이터가 없습니다.")
     st.stop()
+
+# 최신순 정렬
+filtered_data.sort(key=lambda x: x["entry_time"], reverse=True)
 
 # 전략 선택
 options = [
@@ -57,31 +56,33 @@ if what_indicators_raw:
 
 # 색상 매핑
 color_map = {
-    "ema_7": "#F39C12",
-    "ema_25": "#3498DB",
-    "ema_99": "#9B59B6",
-    "rsi": "#2ECC71",
-    "rsi_signal": "#27AE60",
-    "macd": "#E74C3C",
-    "macd_signal": "#C0392B",
-    "boll_upper": "#1ABC9C",
-    "boll_lower": "#1ABC9C",
-    "boll_ma": "#BDC3C7",
+    "ema_7": "#FFCC00",
+    "ema_25": "#05FD05",
+    "ema_99": "#AF02F9",
+    "rsi": "#FFCC00",
+    "rsi_signal": "#09F96D",
+    "macd": "#F61D05",
+    "macd_signal": "#FF7700",
+    "boll_upper": "#15A2DA",
+    "boll_lower": "#15A2DA",
+    "boll_ma": "#15A2DA",
 }
 
-# 캔들 데이터
-res = requests.get(
-    f"{API_URL}/filtered-candle-data",
-    params={
-        "entry_time": selected["entry_time"],
-        "exit_time": selected["exit_time"],
-        "symbol": selected["symbol"],
-        "interval": selected["interval"],
-    },
+# 전체 OHLCV 데이터 가져오기
+res_all = requests.get(f"{API_URL}/ohlcv/{selected['symbol']}/{selected['interval']}")
+all_ohlcv = res_all.json() if res_all.status_code == 200 else []
+
+# entry/exit 기준으로 앞뒤 10개 캔들 포함
+all_ohlcv.sort(key=lambda x: x["timestamp"])
+entry_dt = selected["entry_time"]
+exit_dt = selected["exit_time"]
+
+entry_idx = next((i for i, x in enumerate(all_ohlcv) if x["timestamp"] >= entry_dt), 0)
+exit_idx = next(
+    (i for i, x in enumerate(all_ohlcv) if x["timestamp"] > exit_dt), len(all_ohlcv)
 )
-ohlcv = res.json() if res.status_code == 200 else []
-if not ohlcv:
-    st.stop()
+
+sliced_ohlcv = all_ohlcv[max(0, entry_idx - 10) : min(len(all_ohlcv), exit_idx + 10)]
 
 ohlc_data = [
     {
@@ -90,19 +91,29 @@ ohlc_data = [
         "high": row["high"],
         "low": row["low"],
         "close": row["close"],
+        "color": (
+            "#999"
+            if row["timestamp"] < entry_dt or row["timestamp"] > exit_dt
+            else None
+        ),
     }
-    for row in ohlcv
+    for row in sliced_ohlcv
 ]
+
 volume_data = [
     {
         "time": int(datetime.fromisoformat(row["timestamp"]).timestamp()),
         "value": round(math.log(row["volume"] + 1) * 100, 2),
-        "color": "green" if row["close"] >= row["open"] else "red",
+        "color": (
+            "#999"
+            if row["timestamp"] < entry_dt or row["timestamp"] > exit_dt
+            else ("green" if row["close"] >= row["open"] else "red")
+        ),
     }
-    for row in ohlcv
+    for row in sliced_ohlcv
 ]
 
-# 보조지표 데이터
+# 보조지표 데이터 요청 (entry-10 ~ exit+10 구간)
 indicator_data = {}
 for ind in indicators:
     res = requests.get(
@@ -111,12 +122,22 @@ for ind in indicators:
             "symbol": selected["symbol"],
             "interval": selected["interval"],
             "indicator": ind,
-            "entry_time": selected["entry_time"],
-            "exit_time": selected["exit_time"],
+            "entry_time": sliced_ohlcv[0]["timestamp"],
+            "exit_time": sliced_ohlcv[-1]["timestamp"],
         },
     )
     if res.status_code == 200:
-        indicator_data[ind] = res.json()
+        rows = res.json()
+        base = ind.split("_")[0]
+        for row in rows:
+            row_time = datetime.fromisoformat(row["timestamp"])
+            row["color"] = (
+                "#999"
+                if row_time < datetime.fromisoformat(entry_dt)
+                or row_time > datetime.fromisoformat(exit_dt)
+                else None
+            )
+        indicator_data[ind] = rows
 
 # main/sub 분리
 main_series = []
@@ -137,11 +158,11 @@ for name, rows in indicator_data.items():
     else:
         main_series.append((name, encoded))
 
-# HTML 생성
+# HTML 삽입
 ohlc_b64 = base64.b64encode(json.dumps(ohlc_data).encode()).decode()
 vol_b64 = base64.b64encode(json.dumps(volume_data).encode()).decode()
 main_js = "\n".join(
-    f'mainChart.addLineSeries({{ color: "{color_map.get(name, "white")}" }}).setData(JSON.parse(atob("{data}")));'
+    f'mainChart.addLineSeries({{ color: "{color_map.get(name, "white")}", lineWidth: 1.5 }}).setData(JSON.parse(atob("{data}")));'
     for name, data in main_series
 )
 sub_html = "\n".join(f'<div id="{k}Chart" class="chartArea"></div>' for k in sub_charts)
@@ -151,7 +172,7 @@ const {k}Chart = createChart("{k}Chart");
 syncCharts.push({k}Chart);
 """
     + "\n".join(
-        f'{k}Chart.addLineSeries({{ color: "{color_map.get(name, "white")}" }}).setData(JSON.parse(atob("{data}")));'
+        f'{k}Chart.addLineSeries({{ color: "{color_map.get(name, "white")}", lineWidth: 2 }}).setData(JSON.parse(atob("{data}")));'
         for name, data in lines
     )
     for k, lines in sub_charts.items()
@@ -205,7 +226,6 @@ volumeChart.addHistogramSeries({{
 
 {sub_js}
 
-// 동기화: 줌/스크롤
 syncCharts.forEach(source => {{
     source.timeScale().subscribeVisibleLogicalRangeChange(range => {{
         if (!range) return;

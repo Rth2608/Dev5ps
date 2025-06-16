@@ -82,7 +82,7 @@ with col3:
     st.metric("MDD (최대 낙폭)", f"{filtered_tp_data.get('mdd', 0):+.2f}%")
     st.metric("MDD 고점 시점", filtered_tp_data.get("high_time", "N/A"))
     st.metric("MDD 저점 시점", filtered_tp_data.get("low_time", "N/A"))
-with st.expander("📊 세부 통계량 보기"):
+with st.expander("세부 통계량 보기"):
 
     st.subheader(" 전체 수익률 통계")
     col1, col2 = st.columns(2)
