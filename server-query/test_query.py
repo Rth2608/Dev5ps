@@ -48,6 +48,8 @@ def test_filtered(client):
             "interval": "4h",
             "strategy_sql": "open > 1000",
             "risk_reward_ratio": 5.0,  # random float
+            "start_time": "2017-08-17 04:00:00",
+            "end_time": "2025-06-16 03:00:00",
         },
     )
     response = client.get("/filtered-ohlcv")
@@ -131,6 +133,8 @@ def test_strategy(client, sym, intv, strategy):
             "interval": intv,
             "strategy_sql": strategy,
             "risk_reward_ratio": 5.0,  # random float
+            "start_time": "2017-08-17 04:00:00",
+            "end_time": "2025-06-16 03:00:00",
         },
     )
     assert response.status_code == 200
@@ -157,7 +161,9 @@ def test_strategy_invalid(client, sym, intv, strategy):
             "symbol": sym,
             "interval": intv,
             "strategy_sql": strategy,
-            "risk_reward_ratio": 5.0,  # random float
+            "risk_reward_ratio": 5.0,
+            "start_time": "2017-08-17 04:00:00",
+            "end_time": "2025-06-16 03:00:00",
         },
     )
     assert response.status_code == 500
