@@ -43,7 +43,7 @@ def generate_ohlcv(start_time_str, count, open_base):
     ]
 
 
-# 각 테이블별 데이터 생성
+# 각 테이블별 데이터 생성c
 ohlcv_data = {
     "btc_1h": generate_ohlcv("2017-08-17T05:00:00Z", 40, 1000),
     "btc_4h": generate_ohlcv("2017-08-17T05:00:00Z", 40, 1200),
