@@ -83,6 +83,7 @@ cur.execute(
         symbol TEXT,
         interval TEXT,
         what_indicators TEXT,
+        strategy TEXT,
         PRIMARY KEY (entry_time, exit_time, symbol, interval)
     )
 """
