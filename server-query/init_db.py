@@ -44,7 +44,6 @@ for table, rows in ohlcv_data.items():
     )
 
 
-# ⚙️ 전략 실행 결과 저장용 filtered 테이블 생성 (🛠️ 필수 컬럼 포함)
 cur.execute("DROP TABLE IF EXISTS filtered")
 cur.execute(
     """
