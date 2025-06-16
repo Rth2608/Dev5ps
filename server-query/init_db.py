@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 SYMBOLS = ["BTC", "ETH", "XRP", "SOL"]
 INTERVALS = ["15m", "1h", "4h", "1d"]
 
+# DB 연결
 conn = psycopg2.connect(
     host="localhost",
     port="5432",
@@ -15,7 +16,7 @@ conn = psycopg2.connect(
 cur = conn.cursor()
 
 
-# 테이블 생성 함수
+# 개별 테이블 생성 함수
 def create_table(table_name):
     cur.execute(f"DROP TABLE IF EXISTS {table_name}")
     cur.execute(
@@ -32,7 +33,7 @@ def create_table(table_name):
     )
 
 
-# 샘플 데이터 생성
+# 샘플 데이터 생성 함수
 def generate_ohlcv(start_time, count, open_base):
     return [
         (
@@ -47,7 +48,7 @@ def generate_ohlcv(start_time, count, open_base):
     ]
 
 
-# 모든 테이블 생성 및 샘플 데이터 삽입
+# OHLCV 테이블들 생성 및 데이터 삽입
 start_time = datetime(2017, 8, 17, 0, 0)
 
 for sym in SYMBOLS:
@@ -64,13 +65,20 @@ for sym in SYMBOLS:
                 row,
             )
 
-# filtered 테이블도 미리 생성
+
+# filtered 테이블 생성 (테스트에서 사용하는 모든 컬럼 포함)
 cur.execute("DROP TABLE IF EXISTS filtered")
 cur.execute(
     """
     CREATE TABLE filtered (
         entry_time TIMESTAMPTZ,
+        entry_price NUMERIC,
+        stop_loss NUMERIC,
+        take_profit NUMERIC,
         exit_time TIMESTAMPTZ,
+        exit_price NUMERIC,
+        return NUMERIC,
+        what_indicators TEXT,
         symbol TEXT,
         interval TEXT,
         PRIMARY KEY (entry_time, exit_time, symbol, interval)
@@ -78,6 +86,7 @@ cur.execute(
 """
 )
 
+# 커밋 및 종료
 conn.commit()
 cur.close()
 conn.close()

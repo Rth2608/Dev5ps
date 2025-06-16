@@ -3,11 +3,12 @@ import os
 import subprocess
 import pytest
 from fastapi.testclient import TestClient
+
+# ✅ shared 디렉토리를 sys.path에 추가
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from shared.symbols_intervals import SYMBOLS, INTERVALS
 from main_query import app
-
-# sys.path 수정
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 # ✅ DB 초기화: 테스트 실행 전 init_db.py 실행
@@ -41,13 +42,11 @@ def test_read_ohlcv(client, sym, intv):
     ]
 
 
-# ✅ 잘못된 심볼/인터벌 테스트
 def test_read_ohlcv_invalid(client):
     assert client.get("/ohlcv/XRP/1h").status_code == 400
     assert client.get("/ohlcv/BTC/2h").status_code == 400
 
 
-# ✅ 전략 실행 후 filtered 테이블 조회 테스트
 def test_filtered(client):
     response = client.post(
         "/save_strategy",
@@ -72,7 +71,6 @@ def test_filtered(client):
     )
 
 
-# ✅ 캔들 조회 테스트
 @pytest.mark.parametrize("sym", SYMBOLS)
 @pytest.mark.parametrize("intv", INTERVALS)
 def test_candle_data(client, sym, intv):
@@ -94,7 +92,6 @@ def test_candle_data(client, sym, intv):
     )
 
 
-# ✅ 잘못된 시간 또는 범위 테스트
 INVALID_EXIT_TIME = [
     ("2023-03-21 12:00:00", "Invalid time format"),
     ("2023-03-21", "Invalid time format"),
@@ -122,7 +119,6 @@ def test_candle_data_invalid(client, sym, intv, exit_time, error_desc):
     assert response.json()["detail"] == error_desc
 
 
-# ✅ 유효한 전략 테스트
 VALID_STRATEGY = [
     "low > 100 and high < 5000",
     "volume < 10000",
@@ -150,7 +146,6 @@ def test_strategy(client, sym, intv, strategy):
     assert r_json["message"] in ["전략 실행 및 결과 저장 완료", "전략 실행, 결과 없음"]
 
 
-# ✅ 잘못된 전략 테스트
 INVALID_STRATEGY = [
     "open > 4000 and",
     "volume >",
