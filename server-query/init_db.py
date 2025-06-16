@@ -77,14 +77,17 @@ cur.execute(
         take_profit NUMERIC,
         exit_time TIMESTAMPTZ,
         exit_price NUMERIC,
-        return NUMERIC,
-        what_indicators TEXT,
+        profit_rate NUMERIC,
+        cum_profit_rate NUMERIC,
+        result TEXT,
         symbol TEXT,
         interval TEXT,
+        what_indicators TEXT,
         PRIMARY KEY (entry_time, exit_time, symbol, interval)
     )
 """
 )
+
 
 # 커밋 및 종료
 conn.commit()
