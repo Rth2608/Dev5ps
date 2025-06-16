@@ -8,9 +8,9 @@ INTERVALS = ["15m", "1h", "4h", "1d"]
 conn = psycopg2.connect(
     host="localhost",
     port="5432",
-    dbname="postgres",
-    user="postgres",
-    password="yourpassword",
+    dbname="test",
+    user="test",
+    password="test",
 )
 cur = conn.cursor()
 
