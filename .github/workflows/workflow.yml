@@ -1,0 +1,154 @@
+name: Test and Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      PYTHONPATH: .
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          pip install -r server-query/requirements.txt
+          pip install pytest
+
+      - name: Create .env for test DB
+        run: |
+          cat <<EOF > .env
+          POSTGRES_HOST=localhost
+          POSTGRES_PORT=5432
+          POSTGRES_DB=test
+          POSTGRES_USER=test
+          POSTGRES_PASSWORD=test
+          EOF
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U test; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
+      - name: Initialize DB schema
+        run: python server-query/init_db.py
+
+      - name: Run tests
+        run: pytest server-query/test_query.py
+
+  push:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set .env file
+        run: |
+          cat <<EOF > .env
+          POSTGRES_HOST=${{ secrets.POSTGRES_HOST }}
+          POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          EOF
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Login
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build & Push (query)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: server-query/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: rth2608/query:latest
+
+      - name: Build & Push (frontend)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: server-frontend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: rth2608/frontend:latest
+
+      - name: Build & Push (collect_data)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: server-collect_data/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: rth2608/collect_data:latest
+
+      - name: SSH and prepare server
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.7/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+            docker-compose --version
+
+            cd ~/Dev5ps
+            git fetch origin main
+            git reset --hard origin/main
+
+            docker-compose down
+            docker-compose pull
+
+  deploy:
+    needs: push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH and deploy
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd ~/Dev5ps
+            docker-compose up -d
