@@ -194,7 +194,6 @@ def get_distinct_indicators():
         with engine.connect() as conn:
             rows = conn.execute(text(query)).fetchall()
 
-        # 모든 지표 문자열에서 분해 → 중복 제거
         indicator_set = set()
         for row in rows:
             indicators = row[0]  # 문자열: "ema_7 and rsi and macd"
